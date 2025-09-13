@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Search, Users, Phone, MapPin, Edit, Trash2 } from "lucide-react";
-
+import { SellerModal, SellerFormData } from "@/components/SellerModal";
 interface Seller {
   id: string;
   shopName: string;
@@ -19,7 +19,7 @@ interface Seller {
 
 const Sellers = () => {
   const { toast } = useToast();
-  const [sellers] = useState<Seller[]>([
+  const [sellers, setSellers] = useState<Seller[]>([
     {
       id: "1",
       shopName: "Green Valley Farms",
@@ -59,8 +59,26 @@ const Sellers = () => {
   ]);
 
   const [searchQuery, setSearchQuery] = useState("");
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingSeller, setEditingSeller] = useState<Seller | null>(null);
 
-  const filteredSellers = sellers.filter(seller =>
+  const handleAddSeller = (data: SellerFormData) => {
+    const newSeller: Seller = { id: Date.now().toString(), totalSales: 0, status: data.status || "active", ...data };
+    setSellers((prev) => [newSeller, ...prev]);
+  };
+
+  const handleEditSeller = (data: SellerFormData) => {
+    if (!editingSeller) return;
+    setSellers((prev) => prev.map((s) => (s.id === editingSeller.id ? { ...editingSeller, ...data } : s)));
+  };
+
+  const handleDeleteSeller = (id: string) => {
+    if (!confirm("Delete this seller?")) return;
+    setSellers((prev) => prev.filter((s) => s.id !== id));
+    toast({ title: "Seller deleted", description: "The seller has been removed successfully." });
+  };
+
+  const filteredSellers = sellers.filter((seller) =>
     seller.shopName.toLowerCase().includes(searchQuery.toLowerCase()) ||
     seller.sellerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
     seller.contact.includes(searchQuery)
@@ -75,7 +93,7 @@ const Sellers = () => {
             <h1 className="text-3xl font-bold text-foreground mb-2">Sellers</h1>
             <p className="text-muted-foreground">Manage your vendor network and partnerships</p>
           </div>
-          <Button className="bg-gradient-primary hover:opacity-90 mt-4 md:mt-0">
+          <Button className="bg-gradient-primary hover:opacity-90 mt-4 md:mt-0" onClick={() => { setEditingSeller(null); setModalOpen(true); }}>
             <Plus className="h-4 w-4 mr-2" />
             Add Seller
           </Button>
@@ -123,6 +141,7 @@ const Sellers = () => {
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8 hover:bg-primary/10 hover:text-primary"
+                      onClick={() => { setEditingSeller(seller); setModalOpen(true); }}
                     >
                       <Edit className="h-4 w-4" />
                     </Button>
@@ -130,6 +149,7 @@ const Sellers = () => {
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
+                      onClick={() => handleDeleteSeller(seller.id)}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -184,6 +204,20 @@ const Sellers = () => {
             )}
           </Card>
         )}
+
+        <SellerModal
+          open={modalOpen}
+          onClose={() => { setModalOpen(false); setEditingSeller(null); }}
+          onSubmit={editingSeller ? handleEditSeller : handleAddSeller}
+          initialData={editingSeller ? {
+            shopName: editingSeller.shopName,
+            sellerName: editingSeller.sellerName,
+            address: editingSeller.address,
+            contact: editingSeller.contact,
+            status: editingSeller.status,
+          } : undefined}
+          isEditing={!!editingSeller}
+        />
       </div>
     </Layout>
   );
