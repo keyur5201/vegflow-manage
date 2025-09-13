@@ -1,12 +1,17 @@
+import { useState } from "react";
 import { Layout } from "@/components/Layout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, FileText, Calendar, User, DollarSign } from "lucide-react";
+import { Plus, Search, FileText, Calendar, User, DollarSign, Printer } from "lucide-react";
+import { InvoiceModal, InvoiceFormData } from "@/components/InvoiceModal";
+import { InvoiceViewModal } from "@/components/InvoiceViewModal";
+import { useToast } from "@/hooks/use-toast";
 
 const Invoices = () => {
-  const invoices = [
+  const { toast } = useToast();
+  const [invoices, setInvoices] = useState([
     {
       id: "INV-001",
       billNumber: "B-2024-001",
@@ -14,7 +19,7 @@ const Invoices = () => {
       seller: "Green Valley Farms",
       buyer: "Fresh Market Co.",
       amount: 15750,
-      status: "paid"
+      status: "paid" as const
     },
     {
       id: "INV-002", 
@@ -23,7 +28,7 @@ const Invoices = () => {
       seller: "Organic Gardens",
       buyer: "City Grocers",
       amount: 8900,
-      status: "pending"
+      status: "pending" as const
     },
     {
       id: "INV-003",
@@ -32,9 +37,51 @@ const Invoices = () => {
       seller: "Fresh Produce Co.",
       buyer: "Supermart Ltd.",
       amount: 22400,
-      status: "paid"
+      status: "paid" as const
     }
-  ];
+  ]);
+
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
+  const [editingInvoice, setEditingInvoice] = useState<any>(null);
+
+  const handleCreateInvoice = (data: InvoiceFormData) => {
+    const newInvoice = {
+      id: `INV-${String(invoices.length + 1).padStart(3, '0')}`,
+      ...data
+    };
+    setInvoices([...invoices, newInvoice]);
+    setIsCreateModalOpen(false);
+  };
+
+  const handleUpdateInvoice = (data: InvoiceFormData) => {
+    setInvoices(invoices.map(inv => 
+      inv.id === editingInvoice.id ? { ...inv, ...data } : inv
+    ));
+    setEditingInvoice(null);
+    setIsCreateModalOpen(false);
+  };
+
+  const handleViewInvoice = (invoice: any) => {
+    setSelectedInvoice(invoice);
+    setIsViewModalOpen(true);
+  };
+
+  const handlePrintInvoice = (invoice: any) => {
+    toast({ title: "Print", description: `Printing invoice ${invoice.billNumber}` });
+    // TODO: Implement actual print functionality
+  };
+
+  const openCreateModal = () => {
+    setEditingInvoice(null);
+    setIsCreateModalOpen(true);
+  };
+
+  const openEditModal = (invoice: any) => {
+    setEditingInvoice(invoice);
+    setIsCreateModalOpen(true);
+  };
 
   return (
     <Layout>
@@ -45,7 +92,7 @@ const Invoices = () => {
             <h1 className="text-3xl font-bold text-foreground mb-2">Invoices</h1>
             <p className="text-muted-foreground">Track and manage all your sales invoices</p>
           </div>
-          <Button className="bg-gradient-primary hover:opacity-90 mt-4 md:mt-0">
+          <Button onClick={openCreateModal} className="bg-gradient-primary hover:opacity-90 mt-4 md:mt-0">
             <Plus className="h-4 w-4 mr-2" />
             Create Invoice
           </Button>
@@ -112,10 +159,11 @@ const Invoices = () => {
                 </div>
 
                 <div className="flex space-x-2">
-                  <Button variant="outline" size="sm">
+                  <Button onClick={() => handleViewInvoice(invoice)} variant="outline" size="sm">
                     View
                   </Button>
-                  <Button variant="ghost" size="sm">
+                  <Button onClick={() => handlePrintInvoice(invoice)} variant="ghost" size="sm">
+                    <Printer className="h-4 w-4 mr-1" />
                     Print
                   </Button>
                 </div>
@@ -132,12 +180,33 @@ const Invoices = () => {
             </div>
             <h3 className="text-lg font-semibold text-foreground mb-2">No invoices found</h3>
             <p className="text-muted-foreground mb-4">Start creating invoices to track your sales</p>
-            <Button className="bg-gradient-primary hover:opacity-90">
+            <Button onClick={openCreateModal} className="bg-gradient-primary hover:opacity-90">
               <Plus className="h-4 w-4 mr-2" />
               Create First Invoice
             </Button>
           </Card>
         )}
+
+        {/* Modals */}
+        <InvoiceModal
+          open={isCreateModalOpen}
+          onClose={() => {
+            setIsCreateModalOpen(false);
+            setEditingInvoice(null);
+          }}
+          onSubmit={editingInvoice ? handleUpdateInvoice : handleCreateInvoice}
+          initialData={editingInvoice}
+          isEditing={!!editingInvoice}
+        />
+
+        <InvoiceViewModal
+          open={isViewModalOpen}
+          onClose={() => {
+            setIsViewModalOpen(false);
+            setSelectedInvoice(null);
+          }}
+          invoice={selectedInvoice}
+        />
       </div>
     </Layout>
   );
